@@ -53,14 +53,31 @@ patches/cortexa53-catdrive.mk          # 追加到 target/linux/mvebu/image/cort
 
 ## 产物说明
 
-`immortalwrt-...-catdrive-squashfs-sdcard.img.gz` 解压后是一个完整磁盘镜像：
+**只刷 ext4 那个文件**：`immortalwrt-mvebu-cortexa53-catdrive-ext4-sdcard.img.gz`
+
+首次编译同时产出了 squashfs 版本，但它**不可用**：这个 target 的 sdcard 镜像只建
+kernel + rootfs 两个分区（没有独立的 rootfs_data 分区），squashfs 版本镜像文件只有 42MB，
+配置无法持久化。已在 workflow 里关掉 squashfs，后续只会出 ext4。
+
+解压后是完整磁盘镜像（1,109,524,480 字节）：
 
 | 分区 | 内容 | 大小 |
 |---|---|---|
-| p1 | ext4，含 `Image`、`armada-3720-catdrive.dtb`、`boot.scr` | 32MB |
-| p2 | squashfs rootfs（overlay 自动用分区剩余空间） | 你设的 rootfs_size |
+| p1 | ext4，含 `Image`、`armada-3720-catdrive.dtb`、`boot.scr` | 32MB @ 1MB |
+| p2 | ext4 rootfs，整分区可写（overlay 直接用这个分区） | 1024MB @ 34MB |
 
 镜像**不含 U-Boot**，因为猫盘从 SPI NOR 启动，U-Boot 已经在 SPI 里（你刷群晖时换过的那颗）。
+eMMC 还剩约 7GB 未分区，可以之后 `fdisk` 加 p3 存数据。
+
+### 已实测校验值（build catdrive-1）
+
+```
+文件：immortalwrt-mvebu-cortexa53-catdrive-ext4-sdcard.img.gz
+大小：14,959,766 字节
+crc32 ：72e5679d
+sha256：f0ea56bb2c2441a39ce7c0b74e1d3d201300374a2039bc1783da172eec130c88
+```
+
 
 ---
 
