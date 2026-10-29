@@ -60,8 +60,15 @@ jobs:
           # 在猫盘上 eMMC/SATA/PHY 全对不上，起不来。
           cat patches/cortexa53-catdrive.mk >> openwrt/target/linux/mvebu/image/cortexa53.mk
 
+          # 自定义 boot.scr：用 ext4load（猫盘精简 U-Boot 没有 load 命令），
+          # 并显式带 console=ttyMV0,115200 earlycon=ar3700_uart,0xd0012000
+          cp bootscript/catdrive.bootscript \
+             openwrt/target/linux/mvebu/image/catdrive.bootscript
+
           echo "=== 已注册设备 ==="
           grep -n "Device/catdrive" openwrt/target/linux/mvebu/image/cortexa53.mk
+          echo "=== bootscript ==="
+          grep -n "ext4load\|console=" openwrt/target/linux/mvebu/image/catdrive.bootscript
 
       - name: Configure
         run: |
