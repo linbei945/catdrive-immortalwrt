@@ -108,6 +108,11 @@ jobs:
           CONFIG_PACKAGE_kmod-usb-storage=y
           CONFIG_PACKAGE_e2fsprogs=y
           CONFIG_PACKAGE_fdisk=y
+
+          # OpenClash 所需内核模块：原生镜像没编，公共源里也没有（内核哈希不匹配）
+          CONFIG_PACKAGE_kmod-tun=y
+          CONFIG_PACKAGE_kmod-nft-tproxy=y
+          CONFIG_PACKAGE_kmod-inet-diag=y
           EOF
           make defconfig
 
@@ -149,6 +154,24 @@ jobs:
           sha256sum "$OUT" >> sha256sums-catdrive.txt
           cat sha256sums-catdrive.txt
 
+      - name: Collect matching kernel modules
+        run: |
+          set -e
+          cd openwrt/bin/targets/mvebu/cortexa53
+          mkdir -p kmods-extra
+          n=0
+          for pat in 'kmod-tun-*.apk' 'kmod-nft-tproxy-*.apk' 'kmod-inet-diag-*.apk'; do
+            for f in $(find . -name "$pat"); do
+              cp "$f" kmods-extra/ && n=$((n+1))
+            done
+          done
+          echo "copied=$n"
+          echo "=== kmods 目录 ==="
+          ls kmods/ 2>/dev/null || echo "(无 kmods 目录)"
+          echo "=== kmods-extra ==="
+          ls -l kmods-extra/ || true
+          [ "$n" -ge 3 ] || { echo "!! 未收集到全部内核模块"; exit 1; }
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -156,6 +179,7 @@ jobs:
           path: |
             openwrt/bin/targets/mvebu/cortexa53/*catdrive*
             openwrt/bin/targets/mvebu/cortexa53/sha256sums-catdrive.txt
+            openwrt/bin/targets/mvebu/cortexa53/kmods-extra/*.apk
           retention-days: 90
 
       - name: Publish release
