@@ -76,7 +76,10 @@ jobs:
           # 分区：32MB kernel + 可配置 rootfs，其余留空给 overlay / 数据盘
           CONFIG_TARGET_KERNEL_PARTSIZE=32
           CONFIG_TARGET_ROOTFS_PARTSIZE=${{ github.event.inputs.rootfs_size || '1024' }}
-          CONFIG_TARGET_ROOTFS_SQUASHFS=y
+          # 只出 ext4：该 target 的 sdcard 镜像只有 kernel + rootfs 两个分区，
+          # 没有独立的 rootfs_data 分区，squashfs 版本无法持久化配置（实测镜像仅 40MB）。
+          # CONFIG_TARGET_ROOTFS_SQUASHFS is not set
+          CONFIG_TARGET_ROOTFS_EXT4FS=y
           CONFIG_TARGET_IMAGES_GZIP=y
 
           # LuCI + 中文
