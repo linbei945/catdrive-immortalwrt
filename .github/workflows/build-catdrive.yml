@@ -134,6 +134,21 @@ jobs:
           echo "=== SHA256 ==="
           sha256sum *catdrive*sdcard.img.gz | tee sha256sums-catdrive.txt
 
+      - name: Make U-Boot flashable image
+        id: strip-uboot-image
+        run: |
+          set -e
+          cd openwrt/bin/targets/mvebu/cortexa53
+          SRC=$(ls *catdrive*ext4*sdcard.img.gz | head -1)
+          OUT=${SRC%.img.gz}-uboot.img.gz
+          # OpenWrt 在 gzip 流结束后追加 sysupgrade 元数据（JSON+签名，约 800 字节）。
+          # U-Boot 的 gzwrite 从 buffer 末 8 字节读 gzip CRC/ISIZE，会被这段尾巴顶掉，
+          # 结果是写满整盘之后才报 crc 错误。这里剥掉尾巴，产出可直接 gzwrite 的文件。
+          python3 -c "import sys,zlib;d=open(sys.argv[1],'rb').read();o=zlib.decompressobj(16+zlib.MAX_WBITS);o.decompress(d);t=o.unused_data;open(sys.argv[2],'wb').write(d[:len(d)-len(t)]);print('src=%d tail=%d clean=%d'%(len(d),len(t),len(d)-len(t)))" "$SRC" "$OUT"
+          gzip -t "$OUT"
+          sha256sum "$OUT" >> sha256sums-catdrive.txt
+          cat sha256sums-catdrive.txt
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -150,10 +165,24 @@ jobs:
           name: ImmortalWrt 23.05 for CatDrive (build ${{ github.run_number }})
           body: |
             猫盘（小猫盘 / Armada 3720 / 512MB / 8GB eMMC）单系统 ImmortalWrt 23.05。
-            产物为 sdcard.img.gz（kernel ext4 + squashfs rootfs），不含 U-Boot。
-            刷入：U-Boot 下 `tftp` 到内存后 `gzwrite mmc 0 <addr> $filesize`。
+
+            **刷机请用 `*-sdcard-uboot.img.gz`**（已剥离 sysupgrade 元数据尾巴，
+            U-Boot 的 gzwrite 才能校验通过）。`*-sdcard.img.gz` 为原始产物，
+            仅用于 sysupgrade、归档，不要直接喂给 gzwrite。
+
+            U-Boot 下：
+            ```
+            usb start
+            fatload usb 0:1 0x6000000 <文件名>-sdcard-uboot.img.gz
+            crc32 0x6000000 $filesize
+            gzwrite mmc 0 0x6000000 $filesize
+            setenv bootcmd 'run bootcmd_mmc0'
+            saveenv
+            reset
+            ```
           files: |
             openwrt/bin/targets/mvebu/cortexa53/*catdrive*sdcard.img.gz
+            openwrt/bin/targets/mvebu/cortexa53/*catdrive*sdcard-uboot.img.gz
             openwrt/bin/targets/mvebu/cortexa53/sha256sums-catdrive.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
