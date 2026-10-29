@@ -125,6 +125,17 @@
 	};
 };
 
+
+/*
+ * 2026-10-30 修正：comphy 驱动会通过 ATF 的 SMC 重新配置 SerDes，
+ * 而本机 ATF 接受调用却把 U-Boot 已配好的 SGMII 状态改坏，
+ * 结果是链路 up、但收发全零（5.15 / 6.6 均如此，4.14 无此驱动故正常）。
+ * 这里禁用 comphy，让内核完全不碰 SerDes，保持 U-Boot 的配置。
+ */
+&comphy {
+	status = "disabled";
+};
+
 &eth0 {
 	phy-mode = "sgmii";
 	phy = <&phy0>;
