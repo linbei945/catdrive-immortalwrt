@@ -2,7 +2,7 @@
 
 群晖 DS120j 硬件的小猫盘（Armada 3720 / 512MB / 8GB eMMC）专用 ImmortalWrt 构建仓库。
 
-## 当前版本：25.12.2（方案 B）
+## 当前版本：25.12.2
 
 - 基线：官方 `v25.12.2` tag + 官方 `config.buildinfo`（`ALL_KMODS=y`，vermagic 与官方 kmods 完全一致：`846049ff...`）
 - 机型：`Device/catdrive`（DTS：`armada-3720-catdrive`，含 comphy 禁用修复）
