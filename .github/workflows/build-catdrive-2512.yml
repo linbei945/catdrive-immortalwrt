@@ -152,6 +152,23 @@ jobs:
           EOF
           make defconfig
 
+          # ---- 把全部内核模块从"只编译"改成"安装进镜像" ----
+          # ALL_KMODS 只让它们 =m（编出来但不装）。这里统一翻成 =y，
+          # 让所有 kmod 都进 rootfs：8GB eMMC 足够，且所有 kmod 依赖天然满足，
+          # 以后装任何插件都不需要再编译或额外软件源。
+          echo "=== 转换前 =m 的 kmod 数量 ==="
+          grep -c '^CONFIG_PACKAGE_kmod-.*=m$' .config || true
+          sed -i -E 's/^(CONFIG_PACKAGE_kmod-[A-Za-z0-9_.+-]+)=m$/\1=y/' .config
+          echo "=== 转换后 =y 的 kmod 数量 ==="
+          grep -c '^CONFIG_PACKAGE_kmod-.*=y$' .config || true
+
+          # 再跑一次 defconfig 让依赖关系重新解析（缺依赖的会被自动降级）
+          make defconfig
+          echo "=== defconfig 后最终 =y 的 kmod 数量 ==="
+          grep -c '^CONFIG_PACKAGE_kmod-.*=y$' .config || true
+          echo "=== ALL_KMODS 是否保留 ==="
+          grep '^CONFIG_ALL_KMODS=y' .config || { echo "!! ALL_KMODS 丢失"; exit 1; }
+
           echo "=== 校验设备是否选中 ==="
           grep -q "CONFIG_TARGET_DEVICE_mvebu_cortexa53_DEVICE_catdrive=y" .config \
             || { echo "!! catdrive 设备未被选中，检查 cortexa53.mk"; exit 1; }
@@ -174,6 +191,12 @@ jobs:
           ls -lh
           echo "=== SHA256 ==="
           sha256sum *catdrive*sdcard.img.gz | tee sha256sums-catdrive.txt
+          echo "=== 体积报告 ==="
+          ls -lh *catdrive*.img.gz
+          echo "rootfs 压缩包:"
+          ls -lh *targz-rootfs.tar.gz
+          echo "系统内已装包数量（近似）:"
+          echo "  见上面 defconfig 后的 kmod =y 计数"
 
       - name: Make U-Boot flashable image
         id: strip-uboot-image
