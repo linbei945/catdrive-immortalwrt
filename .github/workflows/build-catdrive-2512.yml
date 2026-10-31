@@ -70,6 +70,35 @@ jobs:
           echo "=== bootscript ==="
           grep -n "ext4load\|console=" openwrt/target/linux/mvebu/image/catdrive.bootscript
 
+      - name: Bake bypass-router defaults
+        run: |
+          set -e
+          mkdir -p openwrt/files/etc/uci-defaults
+          cat > openwrt/files/etc/uci-defaults/99-catdrive-bypass <<'EOS'
+          #!/bin/sh
+          # 出厂即配成旁路由：主路由 192.168.5.1，本机 192.168.5.11
+          # 同时保留 192.168.1.1 作为备用地址，万一 5.x 网段不可达还能直连抢救
+          uci -q delete network.wan
+          uci -q delete network.wan6
+          uci -q delete network.lan.ipaddr
+          uci -q delete network.lan.ip6assign
+          uci add_list network.lan.ipaddr='192.168.5.11/24'
+          uci add_list network.lan.ipaddr='192.168.1.1/24'
+          uci set network.lan.proto='static'
+          uci set network.lan.gateway='192.168.5.1'
+          uci set network.lan.dns='192.168.5.1'
+          uci set network.@device[0].macaddr='4c:65:a8:10:f7:68'
+          uci set dhcp.lan.ignore='1'
+          uci set dhcp.lan.dhcpv4='disabled'
+          uci set dhcp.lan.ra='disabled'
+          uci commit network
+          uci commit dhcp
+          exit 0
+          EOS
+          chmod +x openwrt/files/etc/uci-defaults/99-catdrive-bypass
+          echo "=== 烤入的配置 ==="
+          cat openwrt/files/etc/uci-defaults/99-catdrive-bypass
+
       - name: Configure
         run: |
           set -e
@@ -113,6 +142,13 @@ jobs:
           CONFIG_PACKAGE_kmod-tun=y
           CONFIG_PACKAGE_kmod-nft-tproxy=y
           CONFIG_PACKAGE_kmod-inet-diag=y
+
+          # 关键：把该平台所有内核模块都编出来（=m，不进镜像）。
+          # 这样内核一次成型，以后任何 kmod 都能从本地模块库安装，不必重编。
+          CONFIG_ALL_KMODS=y
+
+          # 主题
+          CONFIG_PACKAGE_luci-theme-argon=y
           EOF
           make defconfig
 
@@ -172,6 +208,18 @@ jobs:
           ls -l kmods-extra/ || true
           [ "$n" -ge 3 ] || { echo "!! 未收集到全部内核模块"; exit 1; }
 
+      - name: Package full kmods repository
+        run: |
+          set -e
+          cd openwrt/bin/targets/mvebu/cortexa53
+          ls -d kmods/*/ 2>/dev/null || { echo "!! 没有 kmods 目录，ALL_KMODS 可能未生效"; exit 1; }
+          echo "=== 各版本模块数 ==="
+          for d in kmods/*/; do echo "$d : $(ls $d/*.apk 2>/dev/null | wc -l) 个"; done
+          tar czf kmods-full.tar.gz -C kmods .
+          ls -lh kmods-full.tar.gz
+          echo "=== 解开后校验 ==="
+          tar tzf kmods-full.tar.gz | head -5
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -180,6 +228,7 @@ jobs:
             openwrt/bin/targets/mvebu/cortexa53/*catdrive*
             openwrt/bin/targets/mvebu/cortexa53/sha256sums-catdrive.txt
             openwrt/bin/targets/mvebu/cortexa53/kmods-extra/*.apk
+            openwrt/bin/targets/mvebu/cortexa53/kmods-full.tar.gz
           retention-days: 90
 
       - name: Publish release
