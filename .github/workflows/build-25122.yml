@@ -92,24 +92,39 @@ jobs:
           echo '=== BUILD OK ==='
           ls -lh bin/targets/mvebu/cortexa53/
 
+      - name: Check kernel vermagic against official kmods
+        run: |
+          cd openwrt
+          VER=$(cat build_dir/target-*/linux-mvebu_cortexa53/linux-*/.vermagic 2>/dev/null | head -n 1)
+          echo "kernel vermagic: $VER"
+          echo "$VER" | grep -q '846049ff0684ff21c8cae8e6f2efc82e' \
+            || { echo 'FAIL: vermagic differs from official 25.12.2 kmods (846049ff...)'; exit 1; }
+          echo '=== VERMAGIC OK: official kmods are installable ==='
+
+      - name: Strip sysupgrade trailer
+        run: |
+          cd openwrt/bin/targets/mvebu/cortexa53
+          python3 "$GITHUB_WORKSPACE/catdrive-25122/strip_trailer.py"
+
       - name: Verify image
         run: |
           cd openwrt/bin/targets/mvebu/cortexa53
           ls -lh *catdrive*
           IMG=$(ls *catdrive*ext4-sdcard*.img.gz | head -n 1)
           test -f "$IMG" || { echo 'FAIL: ext4-sdcard image not found'; exit 1; }
-          gzip -t "$IMG"
+          rc=0
+          gzip -t "$IMG" 2>/dev/null || rc=$?
+          [ "$rc" -eq 0 ] || { echo "FAIL: gzip check rc=$rc (trailer still present?)"; exit 1; }
           echo "=== IMAGE OK: $IMG ==="
           sha256sum "$IMG"
-          # sanity: device profile inside manifest
-          MAN=$(ls *catdrive*manifest 2>/dev/null | head -n 1 || true)
-          if [ -n "$MAN" ]; then grep -c kmod "$MAN" || true; fi
 
       - name: Collect artifacts
         run: |
           cd openwrt/bin/targets/mvebu/cortexa53
           mkdir -p /tmp/out
           cp *catdrive*ext4-sdcard*.img.gz /tmp/out/
+          cp *catdrive*squashfs-sdcard*.img.gz /tmp/out/ 2>/dev/null || true
+          cp *catdrive*initramfs-kernel*.bin /tmp/out/ 2>/dev/null || true
           cp sha256sums /tmp/out/ 2>/dev/null || true
           ls -lh /tmp/out/
 
