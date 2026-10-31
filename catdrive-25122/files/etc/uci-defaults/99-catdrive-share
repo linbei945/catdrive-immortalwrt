@@ -1,0 +1,14 @@
+#!/bin/sh
+uci -q batch <<'UCI'
+set network.lan.proto='dhcp'
+delete network.lan.ipaddr
+delete network.lan.netmask
+delete network.lan.gateway
+delete network.lan.dns
+set system.@system[0].hostname='catdrive'
+set system.@system[0].timezone='CST-8'
+set system.@system[0].zonename='Asia/Shanghai'
+commit network
+commit system
+UCI
+exit 0

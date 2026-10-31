@@ -1,0 +1,188 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Device tree for CatDrive "小猫盘"
+ * Marvell Armada 3720, 512MB DDR3, 8GB eMMC, 1x GbE (88E1512), 1x SATA
+ *
+ * DTS 取自 hanwckf 的 linux-marvell 猫盘适配，保持与 18.06 固件一致。
+ *
+ * 2026-10-29 修正：eMMC 段落原挂在 &sdhci1（sdhci@d0000，SD 卡槽控制器），
+ * 而 Armada 3720 的 eMMC 实际接在 &sdhci0（sdhci@d8000，引脚组 emmc_nb）。
+ * 挂错节点时内核只会探测到空的 d0000 控制器、看不到 mmcblk0，
+ * 启动必然卡在 "Waiting for root device PARTUUID=...-02"。
+ * 已在实机验证：改为 &sdhci0 后 mmcblk0/p1/p2 正常出现，rootfs 正常挂载。
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include "armada-372x.dtsi"
+
+/ {
+	model = "CatDrive (Marvell Armada 3720)";
+	compatible = "marvell,catdrive", "marvell,armada3720", "marvell,armada3710";
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	memory@0 {
+		device_type = "memory";
+		reg = <0x00000000 0x00000000 0x00000000 0x20000000>;
+	};
+
+	vcc_sata_reg: regulator-sata {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_sata";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+		regulator-always-on;
+		enable-active-high;
+		gpio = <&gpiosb 0 GPIO_ACTIVE_HIGH>;
+	};
+
+	gpio_fan {
+		compatible = "gpio-fan";
+		gpios = <&gpiosb 4 GPIO_ACTIVE_HIGH>;
+		gpio-fan,speed-map = <0    0
+		                      1000 1>;
+	};
+};
+
+&sata {
+	status = "okay";
+};
+
+&sdhci0 {
+	non-removable;
+	bus-width = <8>;
+	mmc-ddr-1_8v;
+	mmc-hs200-1_8v;
+	marvell,pad-type = "fixed-1-8v";
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc_pins>;
+	status = "okay";
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	mmccard: mmccard@0 {
+		compatible = "mmc-card";
+		reg = <0>;
+	};
+};
+
+&spi0 {
+	status = "okay";
+
+	m25p80@0 {
+		reg = <0>;
+		compatible = "jedec,spi-nor";
+		spi-max-frequency = <104000000>;
+		m25p,fast-read;
+		status = "okay";
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "uboot";
+				reg = <0 0x1f0000>;
+				read-only;
+			};
+
+			partition@1f0000 {
+				label = "ubootenv";
+				reg = <0x1f0000 0x10000>;
+			};
+
+			partition@200000 {
+				label = "reserve";
+				reg = <0x200000 0x600000>;
+			};
+		};
+	};
+};
+
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart1_pins>;
+	status = "okay";
+};
+
+&usb2 {
+	status = "okay";
+};
+
+&mdio {
+	status = "okay";
+
+	phy0: ethernet-phy@0 {
+		reg = <0>;
+		marvell,reg-init = <0x01 0x1A 0x0 0x47>;
+	};
+};
+
+
+/*
+ * 2026-10-30 修正：comphy 驱动会通过 ATF 的 SMC 重新配置 SerDes，
+ * 而本机 ATF 接受调用却把 U-Boot 已配好的 SGMII 状态改坏，
+ * 结果是链路 up、但收发全零（5.15 / 6.6 均如此，4.14 无此驱动故正常）。
+ * 这里禁用 comphy，让内核完全不碰 SerDes，保持 U-Boot 的配置。
+ */
+&comphy {
+	status = "disabled";
+};
+
+&eth0 {
+	phy-mode = "sgmii";
+	phy = <&phy0>;
+	status = "okay";
+};
+
+&i2c0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_pins>;
+	status = "okay";
+
+	aw2013@45 {
+		compatible = "awinic,aw2013";
+		reg = <0x45>;
+
+		aw2013,red {
+			aw2013,name = "red";
+			aw2013,id = <0>;
+			aw2013,max-brightness = <255>;
+			aw2013,max-current = <3>;
+			aw2013,rise-time-ms = <2>;
+			aw2013,hold-time-ms = <1>;
+			aw2013,fall-time-ms = <2>;
+			aw2013,off-time-ms = <1>;
+		};
+
+		aw2013,green {
+			aw2013,name = "green";
+			aw2013,id = <1>;
+			aw2013,max-brightness = <255>;
+			aw2013,max-current = <3>;
+			aw2013,rise-time-ms = <2>;
+			aw2013,hold-time-ms = <1>;
+			aw2013,fall-time-ms = <2>;
+			aw2013,off-time-ms = <1>;
+			default-state = "on";
+		};
+
+		aw2013,blue {
+			aw2013,name = "blue";
+			aw2013,id = <2>;
+			aw2013,max-brightness = <255>;
+			aw2013,max-current = <3>;
+			aw2013,rise-time-ms = <2>;
+			aw2013,hold-time-ms = <1>;
+			aw2013,fall-time-ms = <2>;
+			aw2013,off-time-ms = <1>;
+		};
+	};
+};

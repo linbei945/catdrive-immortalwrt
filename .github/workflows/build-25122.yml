@@ -1,0 +1,129 @@
+name: Build ImmortalWrt 25.12.2 for CatDrive (Plan B)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'catdrive-25122/**'
+      - '.github/workflows/build-25122.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - name: Checkout catdrive repo
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --force
+          df -h /
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang flex bison g++ gawk \
+            gcc-multilib g++-multilib gettext git libncurses-dev libssl-dev \
+            python3-setuptools python3-pyelftools rsync swig unzip zlib1g-dev \
+            file wget libelf-dev
+
+      - name: Checkout ImmortalWrt v25.12.2
+        run: git clone --depth 1 --branch v25.12.2 https://github.com/immortalwrt/immortalwrt.git openwrt
+
+      - name: Apply catdrive integration
+        run: |
+          mkdir -p openwrt/target/linux/mvebu/files/arch/arm64/boot/dts/marvell
+          cp catdrive-25122/dts/armada-3720-catdrive.dts \
+            openwrt/target/linux/mvebu/files/arch/arm64/boot/dts/marvell/
+          cp catdrive-25122/catdrive.bootscript openwrt/target/linux/mvebu/image/
+          cat catdrive-25122/cortexa53-catdrive.append.mk >> openwrt/target/linux/mvebu/image/cortexa53.mk
+          mkdir -p openwrt/files
+          cp -a catdrive-25122/files/. openwrt/files/
+          cp catdrive-25122/official.buildinfo openwrt/.config
+          printf 'CONFIG_TARGET_ROOTFS_PARTSIZE=2048\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_luci-theme-argon=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_uboot-envtools=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_block-mount=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_e2fsprogs=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_fdisk=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_kmod-hwmon-gpiofan=y\n' >> openwrt/.config
+          printf 'CONFIG_TARGET_DEVICE_mvebu_cortexa53_DEVICE_catdrive=y\n' >> openwrt/.config
+          printf 'CONFIG_TARGET_DEVICE_PACKAGES_mvebu_cortexa53_DEVICE_catdrive=""\n' >> openwrt/.config
+
+      - name: Update and install feeds
+        run: |
+          cd openwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Normalize config and assert key settings
+        run: |
+          cd openwrt
+          make defconfig
+          echo "--- key config check ---"
+          grep -E '^CONFIG_(TARGET_ROOTFS_PARTSIZE|ALL_KMODS|PACKAGE_uboot-envtools|PACKAGE_luci-theme-argon|PACKAGE_block-mount)=' .config
+          grep -q '^CONFIG_ALL_KMODS=y' .config || { echo 'FAIL: ALL_KMODS not enabled'; exit 1; }
+          grep -q '^CONFIG_TARGET_ROOTFS_PARTSIZE=2048' .config || { echo 'FAIL: wrong PARTSIZE'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_uboot-envtools=y' .config || { echo 'FAIL: uboot-envtools missing'; exit 1; }
+          grep -q '^CONFIG_TARGET_DEVICE_mvebu_cortexa53_DEVICE_catdrive=y' .config || { echo 'FAIL: catdrive device not selected'; exit 1; }
+          echo "--- key config OK ---"
+
+      - name: Download sources
+        run: |
+          cd openwrt
+          make download -j$(nproc)
+          # retry once for flaky mirrors
+          make download -j1
+
+      - name: Build
+        run: |
+          cd openwrt
+          if ! make -j$(nproc) > build.log 2>&1; then
+            echo '=== BUILD FAILED ==='
+            tail -n 200 build.log
+            exit 1
+          fi
+          echo '=== BUILD OK ==='
+          ls -lh bin/targets/mvebu/cortexa53/
+
+      - name: Verify image
+        run: |
+          cd openwrt/bin/targets/mvebu/cortexa53
+          ls -lh *catdrive*
+          IMG=$(ls *catdrive*ext4-sdcard*.img.gz | head -n 1)
+          test -f "$IMG" || { echo 'FAIL: ext4-sdcard image not found'; exit 1; }
+          gzip -t "$IMG"
+          echo "=== IMAGE OK: $IMG ==="
+          sha256sum "$IMG"
+          # sanity: device profile inside manifest
+          MAN=$(ls *catdrive*manifest 2>/dev/null | head -n 1 || true)
+          if [ -n "$MAN" ]; then grep -c kmod "$MAN" || true; fi
+
+      - name: Collect artifacts
+        run: |
+          cd openwrt/bin/targets/mvebu/cortexa53
+          mkdir -p /tmp/out
+          cp *catdrive*ext4-sdcard*.img.gz /tmp/out/
+          cp sha256sums /tmp/out/ 2>/dev/null || true
+          ls -lh /tmp/out/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: catdrive-25122-image
+          path: /tmp/out/
+          retention-days: 30
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: catdrive-25122
+          name: CatDrive ImmortalWrt 25.12.2 (Plan B)
+          files: /tmp/out/*
+          overwrite_files: true

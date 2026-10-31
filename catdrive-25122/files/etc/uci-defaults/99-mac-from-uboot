@@ -1,0 +1,13 @@
+#!/bin/sh
+# First boot only: read MAC from U-Boot env and write it into network config.
+# Reused if it failed before (non-zero exit keeps the script for retry).
+CFG=/etc/fw_env.config
+[ -s "$CFG" ] || printf '/dev/mtd1 0x0 0x10000\n' > "$CFG"
+MAC=$(fw_printenv -c "$CFG" ethaddr 2>/dev/null | sed -n 's/^ethaddr=//p' | tr -d '\r' | tr 'A-F' 'a-f')
+case "$MAC" in
+	4c:65:a8:??:??:??) ;;
+	*) exit 1 ;;
+esac
+uci set network.@device[0].macaddr="$MAC"
+uci commit network
+exit 0

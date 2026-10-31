@@ -1,0 +1,44 @@
+#!/bin/sh
+# Auto-adapt network: DHCP client by default; fall back to static
+# 192.168.1.1 after 60s without an address, and retry DHCP on next boot.
+LOG=/tmp/catdrive-netinit.log
+: > "$LOG"
+MARK=/root/.netinit-fallback
+
+if [ -f "$MARK" ]; then
+	uci set network.lan.proto='dhcp'
+	uci -q delete network.lan.ipaddr
+	uci -q delete network.lan.netmask
+	uci commit network
+	rm -f "$MARK"
+	/etc/init.d/network reload
+	sleep 3
+	echo "cleared fallback flag, retrying DHCP" >> "$LOG"
+fi
+
+i=0
+while [ $i -lt 40 ]; do
+	ip link show br-lan >/dev/null 2>&1 && break
+	i=$((i+1))
+	sleep 0.5
+done
+
+for i in $(seq 1 12); do
+	if ip -4 addr show br-lan 2>/dev/null | grep -q "inet "; then
+		echo "got address: $(ip -4 addr show br-lan | awk '/inet /{print $2; exit}')" >> "$LOG"
+		exit 0
+	fi
+	sleep 5
+done
+
+echo "no DHCP for 60s, switching to static 192.168.1.1" >> "$LOG"
+uci set network.lan.proto='static'
+uci set network.lan.ipaddr='192.168.1.1'
+uci set network.lan.netmask='255.255.255.0'
+uci -q delete network.lan.gateway
+uci -q delete network.lan.dns
+uci commit network
+touch "$MARK"
+/etc/init.d/network reload
+sleep 2
+/etc/init.d/dnsmasq restart
