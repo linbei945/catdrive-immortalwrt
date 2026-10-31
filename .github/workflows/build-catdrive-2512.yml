@@ -158,7 +158,12 @@ jobs:
           # 以后装任何插件都不需要再编译或额外软件源。
           echo "=== 转换前 =m 的 kmod 数量 ==="
           grep -c '^CONFIG_PACKAGE_kmod-.*=m$' .config || true
-          sed -i -E 's/^(CONFIG_PACKAGE_kmod-[A-Za-z0-9_.+-]+)=m$/\1=y/' .config
+          # 跳过互斥的替代驱动：ath10k-ct / ath10k-ct-smallbuffers 与 ath10k 提供同名 .ko，
+          # 同时安装会在 package/install 阶段报 "trying to overwrite ... owned by kmod-ath10k" 而中断
+          # （build #5 的实际失败原因）。它们保持 =m，仍会编进 kmods 仓库，日后可单独安装。
+          sed -i -E '/^CONFIG_PACKAGE_kmod-ath10k-ct(-smallbuffers)?=/! s/^(CONFIG_PACKAGE_kmod-[A-Za-z0-9_.+-]+)=m$/\1=y/' .config
+          echo "=== 保持 =m 的互斥驱动 ==="
+          grep -E '^CONFIG_PACKAGE_kmod-ath10k-ct(-smallbuffers)?=' .config || true
           echo "=== 转换后 =y 的 kmod 数量 ==="
           grep -c '^CONFIG_PACKAGE_kmod-.*=y$' .config || true
 
