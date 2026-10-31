@@ -240,7 +240,14 @@ jobs:
         run: |
           set -e
           cd openwrt/bin/targets/mvebu/cortexa53
-          ls -d kmods/*/ 2>/dev/null || { echo "!! 没有 kmods 目录，ALL_KMODS 可能未生效"; exit 1; }
+          # 全装模式（=m 全部翻成 =y）下不会生成 kmods/ 输出目录，
+          # 此时模块已编进镜像，这一步直接跳过，不能当失败处理（build #6 就是栽在这行）。
+          if ! ls -d kmods/*/ >/dev/null 2>&1; then
+            echo "kmods/ 目录不存在 —— 全装模式下模块已在镜像内，跳过打包"
+            echo "=== 镜像内 kmod 数量 ==="
+            grep -c '^CONFIG_PACKAGE_kmod-.*=y$' ../../../../.config || true
+            exit 0
+          fi
           echo "=== 各版本模块数 ==="
           for d in kmods/*/; do echo "$d : $(ls $d/*.apk 2>/dev/null | wc -l) 个"; done
           tar czf kmods-full.tar.gz -C kmods .
