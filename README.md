@@ -7,9 +7,9 @@
 - 基线：官方 `v25.12.2` tag + 官方 `config.buildinfo`（`ALL_KMODS=y`，vermagic 与官方 kmods 完全一致：`846049ff...`）
 - 机型：`Device/catdrive`（DTS：`armada-3720-catdrive`，含 comphy 禁用修复）
 - rootfs 分区：**2G**；内核模块**不预装**（官方 1010 个 kmod 包可直接 `apk add`）
-- 方案 B rootfs 定制（`catdrive-25122/files/`）：
+- 方案 rootfs 定制（`catdrive-25122/files/`）：
   - MAC：首次开机从 U-Boot 环境 `ethaddr` 读取并写入配置（`99-mac-from-uboot`，一次性自删）
-  - 网络：DHCP 客户端 + 60 秒无地址兜底 `192.168.1.1`（`catdrive-netinit`，下次开机自动重试 DHCP）
+  - 网络：DHCP 客户端 + 60 秒无地址兜底 `192.168.1.1`（`catdrive-netinit`，下次开机自动重试 DHCP），旁路由专用
   - `fw_env.config`：`/dev/mtd1 0x0 0x10000`
 - 主题：Argon；主机名：`catdrive`；root 无密码
 
