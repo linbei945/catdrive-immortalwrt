@@ -15,6 +15,8 @@
 
 ## 刷机（需 snail 修改版 U-Boot）
 
+U-Boot（`flash-image-snail.bin`）来自矿渣社区用户 [ihotte（Snail）的猫盘双启动固件项目](http://bbs.nasdiyer.com/forum.php?mod=viewthread&tid=11988)，仅供非商业使用，Release 页附有副本与校验值。
+
 U-Boot 里（上电连按空格进入）：
 
 ```
