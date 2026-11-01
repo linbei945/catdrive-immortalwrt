@@ -43,8 +43,6 @@ jobs:
             openwrt/target/linux/mvebu/files/arch/arm64/boot/dts/marvell/
           cp catdrive-25122/catdrive.bootscript openwrt/target/linux/mvebu/image/
           cat catdrive-25122/cortexa53-catdrive.append.mk >> openwrt/target/linux/mvebu/image/cortexa53.mk
-          mkdir -p openwrt/package/utils/wget-any
-          cp catdrive-25122/wget-any/Makefile openwrt/package/utils/wget-any/Makefile
           mkdir -p openwrt/files
           cp -a catdrive-25122/files/. openwrt/files/
           cp catdrive-25122/official.buildinfo openwrt/.config
@@ -65,7 +63,6 @@ jobs:
           printf 'CONFIG_PACKAGE_ucode-mod-ubus=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_ucode-mod-math=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_ucode-mod-html=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_wget-any=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_samba4-server=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_vsftpd=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_ntfs-3g=y\n' >> openwrt/.config
@@ -139,7 +136,10 @@ jobs:
           cd openwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
-          ./scripts/feeds install luci-theme-argon luci-app-samba4 luci-app-nlbwmon luci-app-wol luci-app-ddns luci-app-wrtbwmon unrar
+          ./scripts/feeds install luci-theme-argon luci-app-nlbwmon luci-app-wol luci-app-ddns luci-app-wrtbwmon unrar
+          git -C feeds/luci checkout d6167ea0 > /dev/null 2>&1 || true
+          git -C feeds/packages checkout 84bd863 > /dev/null 2>&1 || true
+          ./scripts/feeds install -a
 
       - name: Normalize config and assert key settings
         run: |
