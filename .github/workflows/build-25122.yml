@@ -63,8 +63,10 @@ jobs:
           printf 'CONFIG_PACKAGE_ucode-mod-ubus=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_ucode-mod-math=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_ucode-mod-html=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_luci-theme-argon=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_samba4-server=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_vsftpd=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_luci-app-samba4=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_ntfs-3g=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_cifsmount=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_odhcp6c=y\n' >> openwrt/.config
@@ -88,12 +90,12 @@ jobs:
           printf 'CONFIG_PACKAGE_lsof=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_strace=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_inotifywait=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_zip=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_unzip=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_xz=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_bzip2=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_unrar=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_smartmontools=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_lm-sensors=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_hdparm=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_lsblk=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_partx-utils=y\n' >> openwrt/.config
@@ -112,8 +114,6 @@ jobs:
           printf 'CONFIG_PACKAGE_conntrack=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_nlbwmon=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_luci-app-nlbwmon=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_wrtbwmon=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_luci-app-wrtbwmon=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_luci-app-wol=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_etherwake=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_ddns-scripts=y\n' >> openwrt/.config
@@ -135,9 +135,10 @@ jobs:
         run: |
           cd openwrt
           ./scripts/feeds update -a
+          git -C feeds/luci checkout d6167ea0 > /dev/null 2>&1
+          git -C feeds/packages checkout 84bd863 > /dev/null 2>&1
           ./scripts/feeds install -a
-          ./scripts/feeds install luci-app-nlbwmon luci-app-wol luci-app-ddns unrar
-          ./scripts/feeds install -a
+          ./scripts/feeds install luci-theme-argon luci-app-samba4 luci-app-nlbwmon luci-app-wol luci-app-ddns lm-sensors unrar
 
       - name: Normalize config and assert key settings
         run: |
@@ -151,6 +152,9 @@ jobs:
           grep -q '^CONFIG_TARGET_DEVICE_mvebu_cortexa53_DEVICE_catdrive=y' .config || { echo 'FAIL: catdrive device not selected'; exit 1; }
           grep -q '^CONFIG_PACKAGE_dropbear=y' .config || { echo 'FAIL: dropbear missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_luci=y' .config || { echo 'FAIL: luci missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_luci-theme-argon=y' .config || { echo 'FAIL: argon missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_samba4-server=y' .config || { echo 'FAIL: samba4 missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_lm-sensors=y' .config || { echo 'FAIL: lm-sensors missing'; exit 1; }
           true || { echo 'FAIL: material theme missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_samba4-server=y' .config || { echo 'FAIL: samba4 missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_odhcp6c=y' .config || { echo 'FAIL: odhcp6c (IPv6) missing'; exit 1; }
