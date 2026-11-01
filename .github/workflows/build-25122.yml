@@ -47,7 +47,7 @@ jobs:
           cp -a catdrive-25122/files/. openwrt/files/
           cp catdrive-25122/official.buildinfo openwrt/.config
           printf 'CONFIG_TARGET_ROOTFS_PARTSIZE=2048\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_luci-theme-argon=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_luci-theme-material=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_uboot-envtools=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_block-mount=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_e2fsprogs=y\n' >> openwrt/.config
@@ -136,7 +136,7 @@ jobs:
           cd openwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
-          ./scripts/feeds install luci-theme-argon luci-app-nlbwmon luci-app-wol luci-app-ddns luci-app-wrtbwmon unrar
+          ./scripts/feeds install luci-theme-material luci-app-nlbwmon luci-app-wol luci-app-ddns luci-app-wrtbwmon unrar
           git -C feeds/luci checkout d6167ea0 > /dev/null 2>&1 || true
           git -C feeds/packages checkout 84bd863 > /dev/null 2>&1 || true
           ./scripts/feeds install -a
@@ -146,14 +146,14 @@ jobs:
           cd openwrt
           make defconfig
           echo "--- key config check ---"
-          grep -E '^CONFIG_(TARGET_ROOTFS_PARTSIZE|ALL_KMODS|PACKAGE_uboot-envtools|PACKAGE_luci-theme-argon|PACKAGE_block-mount)=' .config
+          grep -E '^CONFIG_(TARGET_ROOTFS_PARTSIZE|ALL_KMODS|PACKAGE_uboot-envtools|PACKAGE_luci-theme-material|PACKAGE_block-mount)=' .config
           grep -q '^CONFIG_ALL_KMODS=y' .config || { echo 'FAIL: ALL_KMODS not enabled'; exit 1; }
           grep -q '^CONFIG_TARGET_ROOTFS_PARTSIZE=2048' .config || { echo 'FAIL: wrong PARTSIZE'; exit 1; }
           grep -q '^CONFIG_PACKAGE_uboot-envtools=y' .config || { echo 'FAIL: uboot-envtools missing'; exit 1; }
           grep -q '^CONFIG_TARGET_DEVICE_mvebu_cortexa53_DEVICE_catdrive=y' .config || { echo 'FAIL: catdrive device not selected'; exit 1; }
           grep -q '^CONFIG_PACKAGE_dropbear=y' .config || { echo 'FAIL: dropbear missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_luci=y' .config || { echo 'FAIL: luci missing'; exit 1; }
-          grep -q '^CONFIG_PACKAGE_luci-theme-argon=y' .config || { echo 'FAIL: argon theme missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_luci-theme-material=y' .config || { echo 'FAIL: material theme missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_samba4-server=y' .config || { echo 'FAIL: samba4 missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_odhcp6c=y' .config || { echo 'FAIL: odhcp6c (IPv6) missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_bash=y' .config || { echo 'FAIL: bash missing'; exit 1; }
