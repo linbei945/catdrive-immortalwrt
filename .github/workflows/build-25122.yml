@@ -46,6 +46,7 @@ jobs:
           mkdir -p openwrt/files
           cp -a catdrive-25122/files/. openwrt/files/
           cp catdrive-25122/official.buildinfo openwrt/.config
+          sed -i 's/^CONFIG_TARGET_ROOTFS_PARTSIZE=300/CONFIG_TARGET_ROOTFS_PARTSIZE=2048/' openwrt/.config
           printf 'CONFIG_PACKAGE_ucode=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_ucode-mod-fs=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_ucode-mod-uci=y\n' >> openwrt/.config
@@ -148,8 +149,6 @@ jobs:
           grep -q '^CONFIG_PACKAGE_luci=y' .config || { echo 'FAIL: luci missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_samba4-server=y' .config || { echo 'FAIL: samba4 missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_lm-sensors=y' .config || { echo 'FAIL: lm-sensors missing'; exit 1; }
-          true || { echo 'FAIL: material theme missing'; exit 1; }
-          grep -q '^CONFIG_PACKAGE_samba4-server=y' .config || { echo 'FAIL: samba4 missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_odhcp6c=y' .config || { echo 'FAIL: odhcp6c (IPv6) missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_bash=y' .config || { echo 'FAIL: bash missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_curl=y' .config || { echo 'FAIL: curl missing'; exit 1; }
