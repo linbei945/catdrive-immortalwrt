@@ -198,6 +198,33 @@ GitHub Actions：`.github/workflows/build-25122.yml`（push 自动触发，约 3
 （`PARTSIZE=2048`、`argon`、`uboot-envtools` 等），`make defconfig && make -j`。
 内核 vermagic 必须等于官方 kmods 的 `846049ff0684ff21c8cae8e6f2efc82e`（CI 已内置断言）。
 
+## 常用应用：OpenClash 安装（照抄这份配置就不会报错）
+
+本镜像 **lan 为 DHCP 模式**（无静态 IP，为了换网络环境能自动适配），
+OpenClash 默认只读配置文件里的 `network.lan.ipaddr`，会读不到而启动失败。
+按下面步骤装，天然避开这个问题：
+
+```sh
+# 1. 安装（自动带入 ruby / dnsmasq-full / kmod-tun 等依赖）
+apk add luci-app-openclash
+
+# 2. 关键一步：明确指定 LAN 网卡（DHCP 模式必须；静态 IP 模式可省）
+uci set openclash.config.interface_name=br-lan
+uci commit openclash
+
+# 3. 启用并启动
+uci set openclash.config.enable=1
+/etc/init.d/openclash restart
+
+# 4. 看日志确认成功
+grep -E "Start Successful|Error" /tmp/openclash.log | tail -3
+```
+
+看到 `[Tip] OpenClash Start Successful!` 即启动成功。然后浏览器进
+LuCI → 服务 → OpenClash，导入订阅/配置文件即可。
+
+图形界面等价操作：OpenClash → 插件设置 → 常规设置 → **指定 LAN 接口 = br-lan**。
+
 ## 常见问题（装应用后出问题先看这里）
 
 ### 装了 LuCI 应用，侧栏菜单里没有
@@ -211,6 +238,21 @@ apk add luci-compat
 ```
 
 然后**退出 LuCI 重新登录**（菜单在登录会话时生成）。
+
+### OpenClash 启动后立刻自动停止，日志报 `LAN IP Address Get Error`
+
+原因：本镜像 lan 是 DHCP 模式（配置里没有静态 `ipaddr`），OpenClash
+默认只读配置文件、且“自动探测”也从配置推导，因此拿不到 LAN 网段。
+地址其实是有的（`ip addr show br-lan` 能看到），只是它查错了地方。
+
+```sh
+uci set openclash.config.interface_name=br-lan
+uci commit openclash
+uci set openclash.config.enable=1
+/etc/init.d/openclash restart
+```
+
+界面位置：OpenClash → 插件设置 → 常规设置 → 指定 LAN 接口 = br-lan。
 
 ### 安装时报包冲突
 
