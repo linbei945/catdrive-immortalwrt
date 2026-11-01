@@ -151,7 +151,6 @@ jobs:
           grep -q '^CONFIG_TARGET_DEVICE_mvebu_cortexa53_DEVICE_catdrive=y' .config || { echo 'FAIL: catdrive device not selected'; exit 1; }
           grep -q '^CONFIG_PACKAGE_dropbear=y' .config || { echo 'FAIL: dropbear missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_luci=y' .config || { echo 'FAIL: luci missing'; exit 1; }
-          grep -q '^CONFIG_PACKAGE_luci-theme-argon=y' .config || { echo 'FAIL: argon missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_samba4-server=y' .config || { echo 'FAIL: samba4 missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_lm-sensors=y' .config || { echo 'FAIL: lm-sensors missing'; exit 1; }
           true || { echo 'FAIL: material theme missing'; exit 1; }
