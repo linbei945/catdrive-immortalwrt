@@ -58,3 +58,15 @@
 
 ---
 *2026-11-01 补：argon 五连败复盘（O1-O4）+ 官方源实证方法论*
+
+## 六、脚本批量修改导致配置项丢失
+
+| # | 症状 | 根因 | 防复发措施 |
+|---|---|---|---|
+| P1 | CI 断言 FAIL: wrong PARTSIZE（buildinfo 300 覆盖了 2048） | 用 python 重建 workflow 的 printf 块时，`keep_lines` 变量计算后**忘了使用**——PARTSIZE=2048/ALL_KMODS 等非 PACKAGE 行被整块替换掉 | **改完配置必须 diff 验证**：`git diff` 确认只改了预期行；PARTSIZE 类"非包配置"不进 printf 块，用 sed 在 cp buildinfo 后立即修正（单条无歧义条目） |
+| P2 | 本地 config 被多次 make 重算弄丢功能包（bash/curl/samba4 变 is not set） | buildinfo 的 PARTSIZE=300 与 printf 的 2048 并存时，defconfig 解析结果不确定；且多次 build 之间 .config 被意外覆盖 | .config 是易失品：**每次编译前跑完整断言清单**（本地 22 项 / 云端 8 项），断言失败立即重建，不带病编译 |
+
+**流程定稿**：buildinfo cp 后第一行就是 `sed PARTSIZE 300->2048`；断言清单是编译的唯一准入门槛。
+
+---
+*2026-11-01 补：P1-P2 配置丢失复盘*
