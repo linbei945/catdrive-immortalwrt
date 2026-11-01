@@ -57,6 +57,12 @@ jobs:
           printf 'CONFIG_PACKAGE_luci=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_uhttpd=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_rpcd=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_ucode=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_ucode-mod-fs=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_ucode-mod-uci=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_ucode-mod-ubus=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_ucode-mod-math=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_ucode-mod-html=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_samba4-server=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_luci-app-samba4=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_vsftpd=y\n' >> openwrt/.config
