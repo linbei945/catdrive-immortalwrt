@@ -45,86 +45,6 @@ jobs:
           cat catdrive-25122/cortexa53-catdrive.append.mk >> openwrt/target/linux/mvebu/image/cortexa53.mk
           mkdir -p openwrt/files
           cp -a catdrive-25122/files/. openwrt/files/
-          cp catdrive-25122/official.buildinfo openwrt/.config
-          sed -i 's/^CONFIG_TARGET_ROOTFS_PARTSIZE=300/CONFIG_TARGET_ROOTFS_PARTSIZE=2048/' openwrt/.config
-          printf 'CONFIG_PACKAGE_ucode=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_ucode-mod-fs=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_ucode-mod-uci=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_ucode-mod-ubus=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_ucode-mod-math=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_ucode-mod-html=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_luci=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_dropbear=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_uhttpd=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_rpcd=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_luci-app-samba4=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_ip-full=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_conntrack=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_odhcp6c=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_odhcpd-ipv6only=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_ddns-scripts=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_luci-app-ddns=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_luci-app-wol=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_etherwake=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_nlbwmon=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_luci-app-nlbwmon=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_samba4-server=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_vsftpd=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_ntfs-3g=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_cifsmount=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_smartmontools=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_hdparm=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_lm-sensors=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_lsblk=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_partx-utils=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_resize2fs=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_dosfstools=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_mkf2fs=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_btrfs-progs=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_uboot-envtools=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_block-mount=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_e2fsprogs=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_fdisk=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_kmod-hwmon-gpiofan=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_kmod-usb-storage-uas=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_bash=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_curl=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_coreutils=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_coreutils-base64=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_coreutils-nohup=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_coreutils-sha1sum=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_coreutils-stat=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_coreutils-tac=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_vim-full=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_less=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_tree=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_file=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_screen=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_bc=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_pv=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_lsof=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_strace=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_inotifywait=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_tcpdump=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_iperf3=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_httping=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_iftop=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_bind-dig=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_openssl-util=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_ca-certificates=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_ca-bundle=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_unrar=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_unzip=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_xz=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_bzip2=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_i2c-tools=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_usbutils=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_rng-tools=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_zoneinfo-asia=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_git=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_git-http=y\n' >> openwrt/.config
-          printf 'CONFIG_TARGET_DEVICE_mvebu_cortexa53_DEVICE_catdrive=y\n' >> openwrt/.config
-          printf 'CONFIG_TARGET_DEVICE_PACKAGES_mvebu_cortexa53_DEVICE_catdrive=""\n' >> openwrt/.config
 
       - name: Update and install feeds
         run: |
@@ -135,24 +55,39 @@ jobs:
           ./scripts/feeds install -a
           ./scripts/feeds install luci-app-samba4 luci-app-nlbwmon luci-app-wol luci-app-ddns lm-sensors unrar
 
-      - name: Normalize config and assert key settings
+      - name: Apply verified config and assert key settings
         run: |
           cd openwrt
+          cp ../catdrive-25122/config.full .config
           make defconfig
           echo "--- key config check ---"
-          grep -E '^CONFIG_(TARGET_ROOTFS_PARTSIZE|ALL_KMODS|PACKAGE_uboot-envtools|PACKAGE_luci|PACKAGE_block-mount)=' .config
+          grep -E '^CONFIG_(TARGET_ROOTFS_PARTSIZE|ALL_KMODS)=' .config
           grep -q '^CONFIG_ALL_KMODS=y' .config || { echo 'FAIL: ALL_KMODS not enabled'; exit 1; }
           grep -q '^CONFIG_TARGET_ROOTFS_PARTSIZE=2048' .config || { echo 'FAIL: wrong PARTSIZE'; exit 1; }
-          grep -q '^CONFIG_PACKAGE_uboot-envtools=y' .config || { echo 'FAIL: uboot-envtools missing'; exit 1; }
           grep -q '^CONFIG_TARGET_DEVICE_mvebu_cortexa53_DEVICE_catdrive=y' .config || { echo 'FAIL: catdrive device not selected'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_uboot-envtools=y' .config || { echo 'FAIL: uboot-envtools missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_dropbear=y' .config || { echo 'FAIL: dropbear missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_luci=y' .config || { echo 'FAIL: luci missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_ucode=y' .config || { echo 'FAIL: ucode missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_samba4-server=y' .config || { echo 'FAIL: samba4 missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_luci-app-samba4=y' .config || { echo 'FAIL: luci-app-samba4 missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_lm-sensors=y' .config || { echo 'FAIL: lm-sensors missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_odhcp6c=y' .config || { echo 'FAIL: odhcp6c (IPv6) missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_odhcpd-ipv6only=y' .config || { echo 'FAIL: odhcpd missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_ddns-scripts=y' .config || { echo 'FAIL: ddns-scripts missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_luci-app-ddns=y' .config || { echo 'FAIL: luci-app-ddns missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_luci-app-wol=y' .config || { echo 'FAIL: luci-app-wol missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_nlbwmon=y' .config || { echo 'FAIL: nlbwmon missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_bash=y' .config || { echo 'FAIL: bash missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_curl=y' .config || { echo 'FAIL: curl missing'; exit 1; }
-          echo "--- key config OK ---"
+          grep -q '^CONFIG_PACKAGE_smartmontools=y' .config || { echo 'FAIL: smartmontools missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_vsftpd=y' .config || { echo 'FAIL: vsftpd missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_ntfs-3g=y' .config || { echo 'FAIL: ntfs-3g missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_unrar=y' .config || { echo 'FAIL: unrar missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_ip-full=y' .config || { echo 'FAIL: ip-full missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_btrfs-progs=y' .config || { echo 'FAIL: btrfs-progs missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_block-mount=y' .config || { echo 'FAIL: block-mount missing'; exit 1; }
+          echo "--- key config OK (25 asserts) ---"
 
       - name: Download sources
         run: |
