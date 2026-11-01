@@ -63,7 +63,6 @@ jobs:
           printf 'CONFIG_PACKAGE_ucode-mod-ubus=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_ucode-mod-math=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_ucode-mod-html=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_luci-theme-argon=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_samba4-server=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_vsftpd=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_luci-app-samba4=y\n' >> openwrt/.config
@@ -138,7 +137,7 @@ jobs:
           git -C feeds/luci checkout d6167ea0 > /dev/null 2>&1
           git -C feeds/packages checkout 84bd863 > /dev/null 2>&1
           ./scripts/feeds install -a
-          ./scripts/feeds install luci-theme-argon luci-app-samba4 luci-app-nlbwmon luci-app-wol luci-app-ddns lm-sensors unrar
+          ./scripts/feeds install luci-app-samba4 luci-app-nlbwmon luci-app-wol luci-app-ddns lm-sensors unrar
 
       - name: Normalize config and assert key settings
         run: |
