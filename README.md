@@ -10,7 +10,6 @@
 - rootfs 定制（`catdrive-25122/files/`）：
   - MAC：首次开机从 U-Boot 环境 `ethaddr` 读取并写入配置（`99-mac-from-uboot`，一次性自删）
   - 网络：DHCP 客户端 + 60 秒无地址兜底 `192.168.1.1`（`catdrive-netinit`，下次开机自动重试 DHCP）
-  - **`catdrive-reflash`：网线重刷工具**（见下文"重刷/升级"）
   - `fw_env.config`：`/dev/mtd1 0x0 0x10000`
 - 主题：Argon；主机名：`catdrive`；root 无密码
 
@@ -147,20 +146,16 @@ apk update && apk upgrade
 
 ## 2. 整盘重刷（大版本/系统更换）
 
-设备内已内置 `catdrive-reflash` 工具：
+TTL 线此时**只用来敲命令，不传镜像**——镜像走网线（SSH）。
+
+在电脑上把新镜像传到设备并校验：
 
 ```
-# 在电脑上把新镜像传到设备
-scp 新镜像.img.gz root@设备IP:/root/
-
-# 在设备上运行
-catdrive-reflash /root/新镜像.img.gz
+scp 新镜像.img.gz root@设备IP:/root/new.img.gz
+ssh root@设备IP md5sum /root/new.img.gz     # 与电脑端比对，一致才继续
 ```
 
-工具会校验镜像并输出三条 U-Boot 命令。然后：
-
-1. 重启，倒计时连按空格进 U-Boot；
-2. 执行工具提示的三条命令：
+然后重启进 U-Boot（倒计时连按空格），依次执行三条命令：
 
 ```
 ext4load mmc 0:2 0x6000000 new.img.gz
@@ -168,7 +163,8 @@ gzwrite mmc 0 0x6000000 $filesize
 reset
 ```
 
-镜像已在设备自己的 rootfs 里（`mmc 0:2`），**网线不需要再动**。
+`ext4load` 直接从设备 rootfs（`mmc 0:2`）读取镜像——网线传完数据后，
+U-Boot 阶段不再需要任何网络操作。`gzwrite` 期间（3~5 分钟）不能断电。
 
 ## 3. 完全没有 TTL 线时
 
