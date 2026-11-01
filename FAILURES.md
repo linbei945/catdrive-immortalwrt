@@ -44,3 +44,17 @@
 
 ---
 *最后更新：2026-11-01（云端 5 轮失败 + 本地 2 轮失败的全量复盘）*
+
+## 五、官方符号 vs 自定义清单（argon 五连败总复盘）
+
+| # | 症状 | 根因 | 防复发措施 |
+|---|---|---|---|
+| O1 | argon 在 CI 的 defconfig 后反复被剔（5 轮） | argon 的 `LUCI_DEPENDS:=+wget-any`，而主线提供的是 **`PROVIDES:=@wget-any`（带 @ 的虚拟包语法）**——符号不匹配，kconfig 判依赖不满足 | **以官方源实证为准**：设备 `apk search` 查官方源有没有该包，有 = 官方设计就是在线安装，**不进构建** |
+| O2 | 自造 wget-any 元包引发 kconfig 递归环 | 元包 DEPENDS uclient-fetch，与主线 uclient-fetch 的 PROVIDES @wget-any 撞环 | 同上：官方源已有的东西不自造 |
+| O3 | feeds"漂移"误判 | 官方源（apk）里有包 ≠ git feeds 分支 HEAD 里有包定义——**两者是不同层面**（release 产物 vs 滚动源码） | 查包存在性：① 设备 apk search（官方 release 源实证）② 本地 `tmp/.config-package.in`（构建树依赖表实证），**不要用 feeds git 分支的 index 文件判断** |
+| O4 | feeds 钉死旧 commit 是错误方向 | 上游更新后钉死旧版 = 用过时状态，违背通用性 | **以官方最新为准**：官方删了什么就从清单去掉什么，官方源里有的走在线安装 |
+
+**主题策略定稿**：镜像用默认 bootstrap；argon/material 等主题 = 设备 `apk add luci-theme-xxx` 在线装（官方源验证存在且一键装成功）。
+
+---
+*2026-11-01 补：argon 五连败复盘（O1-O4）+ 官方源实证方法论*
