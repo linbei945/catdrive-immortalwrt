@@ -1,0 +1,43 @@
+#!/bin/sh
+# catdrive-reflash - 网线重刷工具（免 TTL 传镜像）
+# 把新固件镜像放入 /root（eMMC rootfs），重启进 U-Boot 后
+# 只需三条固定命令即可完成刷写。镜像传输全程走网线（SSH）。
+#
+# 用法: catdrive-reflash /root/xxx.img.gz
+
+IMG="$1"
+[ -f "$IMG" ] || {
+	echo "用法: catdrive-reflash <固件镜像.img.gz>"
+	echo "镜像下载: https://github.com/linbei945/catdrive-immortalwrt/releases"
+	exit 1
+}
+
+AVAIL=$(df -k /root | tail -1 | awk '{print $4}')
+SIZE=$(du -k "$IMG" | awk '{print $1}')
+[ "$SIZE" -lt "$AVAIL" ] || {
+	echo "错误: /root 剩余 ${AVAIL}K，装不下 ${SIZE}K 的镜像"
+	exit 1
+}
+
+cp "$IMG" /root/new.img.gz
+sync
+M1=$(md5sum "$IMG" | awk '{print $1}')
+M2=$(md5sum /root/new.img.gz | awk '{print $1}')
+[ "$M1" = "$M2" ] || { echo "错误: 拷贝后校验失败，不要重启"; exit 1; }
+
+echo
+echo "镜像已就位并校验一致（/root/new.img.gz）"
+echo
+echo "下一步（需要 TTL 线，只敲命令不传数据）："
+echo "  1. 重启，倒计时连按空格进入 U-Boot（Marvell>>）"
+echo "  2. 依次执行三条命令："
+echo
+echo "       ext4load mmc 0:2 0x6000000 new.img.gz"
+echo "       gzwrite mmc 0 0x6000000 \$filesize"
+echo "       reset"
+echo
+echo "  gzwrite 期间（3~5 分钟）绝不能断电。"
+echo "  完成后设备自动重启进入新系统，网络配置会被清空重置。"
+echo
+echo "提示: 如果只是小版本升级，先试试 apk update && apk upgrade，"
+echo "      不需要整盘重刷。"
