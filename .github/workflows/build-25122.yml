@@ -53,6 +53,10 @@ jobs:
           printf 'CONFIG_PACKAGE_e2fsprogs=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_fdisk=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_kmod-hwmon-gpiofan=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_dropbear=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_luci=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_uhttpd=y\n' >> openwrt/.config
+          printf 'CONFIG_PACKAGE_rpcd=y\n' >> openwrt/.config
           printf 'CONFIG_TARGET_DEVICE_mvebu_cortexa53_DEVICE_catdrive=y\n' >> openwrt/.config
           printf 'CONFIG_TARGET_DEVICE_PACKAGES_mvebu_cortexa53_DEVICE_catdrive=""\n' >> openwrt/.config
 
@@ -72,6 +76,8 @@ jobs:
           grep -q '^CONFIG_TARGET_ROOTFS_PARTSIZE=2048' .config || { echo 'FAIL: wrong PARTSIZE'; exit 1; }
           grep -q '^CONFIG_PACKAGE_uboot-envtools=y' .config || { echo 'FAIL: uboot-envtools missing'; exit 1; }
           grep -q '^CONFIG_TARGET_DEVICE_mvebu_cortexa53_DEVICE_catdrive=y' .config || { echo 'FAIL: catdrive device not selected'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_dropbear=y' .config || { echo 'FAIL: dropbear missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_luci=y' .config || { echo 'FAIL: luci missing'; exit 1; }
           echo "--- key config OK ---"
 
       - name: Download sources
