@@ -87,6 +87,8 @@ jobs:
           grep -q '^CONFIG_PACKAGE_ip-full=y' .config || { echo 'FAIL: ip-full missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_btrfs-progs=y' .config || { echo 'FAIL: btrfs-progs missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_block-mount=y' .config || { echo 'FAIL: block-mount missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_luci-compat=y' .config || { echo 'FAIL: luci-compat missing'; exit 1; }
+          grep -q '^CONFIG_PACKAGE_lua=y' .config || { echo 'FAIL: lua missing'; exit 1; }
           echo "--- key config OK (25 asserts) ---"
 
       - name: Download sources

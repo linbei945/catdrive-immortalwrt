@@ -197,3 +197,41 @@ GitHub Actions：`.github/workflows/build-25122.yml`（push 自动触发，约 3
 本地编译等价流程：ImmortalWrt `v25.12.2` + `catdrive-25122/` 集成 + `official.buildinfo` 差异
 （`PARTSIZE=2048`、`argon`、`uboot-envtools` 等），`make defconfig && make -j`。
 内核 vermagic 必须等于官方 kmods 的 `846049ff0684ff21c8cae8e6f2efc82e`（CI 已内置断言）。
+
+## 常见问题（装应用后出问题先看这里）
+
+### 装了 LuCI 应用，侧栏菜单里没有
+
+旧式 Lua 应用（OpenClash 及大量第三方插件）在新版 ucode LuCI 上需要兼容层：
+
+```sh
+apk add luci-compat
+/etc/init.d/rpcd restart
+/etc/init.d/uhttpd restart
+```
+
+然后**退出 LuCI 重新登录**（菜单在登录会话时生成）。
+
+### 安装时报包冲突
+
+多半是和 `dnsmasq` 冲突（OpenClash 等需要完整版）：
+
+```sh
+apk add dnsmasq-full
+```
+
+### 应用启动了但报缺内核模块（`.ko`）
+
+在官方源找同名 kmod 安装即可，例如：
+
+```sh
+apk search kmod- | grep 关键词
+apk add kmod-xxx
+```
+
+（本镜像的 vermagic 与官方 kmods 完全一致，官方源的内核模块可直接安装。）
+
+### 换了软件源后 apk 报错
+
+源文件：`/etc/apk/repositories.d/distfeeds.list`，格式为每行一个
+`https://镜像站/immortalwrt/releases/25.12.2/.../packages.adb`。
