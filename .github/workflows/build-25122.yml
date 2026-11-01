@@ -117,7 +117,6 @@ jobs:
           printf 'CONFIG_PACKAGE_openssl-util=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_ca-certificates=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_ca-bundle=y\n' >> openwrt/.config
-          printf 'CONFIG_PACKAGE_gotty=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_i2c-tools=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_usbutils=y\n' >> openwrt/.config
           printf 'CONFIG_PACKAGE_rng-tools=y\n' >> openwrt/.config
@@ -133,7 +132,7 @@ jobs:
           cd openwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
-          ./scripts/feeds install luci-theme-argon luci-app-samba4 luci-app-nlbwmon luci-app-wol luci-app-ddns luci-app-wrtbwmon gotty unrar lm-sensors
+          ./scripts/feeds install luci-theme-argon luci-app-samba4 luci-app-nlbwmon luci-app-wol luci-app-ddns luci-app-wrtbwmon unrar lm-sensors
 
       - name: Normalize config and assert key settings
         run: |
@@ -150,7 +149,6 @@ jobs:
           grep -q '^CONFIG_PACKAGE_luci-theme-argon=y' .config || { echo 'FAIL: argon theme missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_samba4-server=y' .config || { echo 'FAIL: samba4 missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_odhcp6c=y' .config || { echo 'FAIL: odhcp6c (IPv6) missing'; exit 1; }
-          grep -q '^CONFIG_PACKAGE_gotty=y' .config || { echo 'FAIL: gotty missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_bash=y' .config || { echo 'FAIL: bash missing'; exit 1; }
           grep -q '^CONFIG_PACKAGE_curl=y' .config || { echo 'FAIL: curl missing'; exit 1; }
           echo "--- key config OK ---"
