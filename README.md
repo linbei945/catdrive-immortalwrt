@@ -1,161 +1,311 @@
-# CatDrive (小猫盘) ImmortalWrt
+# CatDrive（小猫盘）ImmortalWrt 固件
 
-群晖 DS120j 硬件的小猫盘（Armada 3720 / 512MB / 8GB eMMC）专用 ImmortalWrt 构建仓库。
-
-## 当前版本：25.12.2
-
-- 基线：官方 `v25.12.2` tag + 官方 `config.buildinfo`（`ALL_KMODS=y`，vermagic 与官方 kmods 完全一致：`846049ff...`）
-- 机型：`Device/catdrive`（DTS：`armada-3720-catdrive`，含 comphy 禁用修复）
-- rootfs 分区：**2G**；内核模块**不预装**（官方 1010 个 kmod 包可直接 `apk add`）
-- rootfs 定制（`catdrive-25122/files/`）：
-  - MAC：首次开机从 U-Boot 环境 `ethaddr` 读取并写入配置（`99-mac-from-uboot`，一次性自删）
-  - 网络：DHCP 客户端 + 60 秒无地址兜底 `192.168.1.1`（`catdrive-netinit`，下次开机自动重试 DHCP）
-  - `fw_env.config`：`/dev/mtd1 0x0 0x10000`
-- 主题：Argon；主机名：`catdrive`；root 无密码
-
-## 产物
-
-[Releases → catdrive-25122](https://github.com/linbei945/catdrive-immortalwrt/releases/tag/catdrive-25122)：
-`immortalwrt-25.12.2-mvebu-cortexa53-catdrive-ext4-sdcard.img.gz`（约 18MB）
-及 snail 修改版 U-Boot（`flash-image-snail.bin`，原厂 U-Boot 的机器必须先刷它）。
-
-镜像 sha256 见 Release 内 `checksums.txt`，下载后先校验再刷。
+群晖 DS120j 硬件（Marvell Armada 3720 / Cortex-A53 / 8GB eMMC）的 ImmortalWrt 构建仓库。
+从源码到可刷镜像全程可复现，产物发布在 [Releases](https://github.com/linbei945/catdrive-immortalwrt/releases/tag/catdrive-25122)。
 
 ---
 
-# 一、首次刷机（需要 TTL 线，请完整阅读）
+## 一、当前版本一览
 
-## 0. 风险说明（先读这个）
+| 项目 | 值 |
+|---|---|
+| 系统 | ImmortalWrt **25.12.2**（官方 tag `v25.12.2`，commit `4fc16f2`） |
+| 内核 | 6.12.103，vermagic `846049ff0684ff21c8cae8e6f2efc82e`（**与官方 kmods 完全一致**） |
+| 机型 | `Device/catdrive`（DTS `armada-3720-catdrive.dts`，含 comphy 禁用修复） |
+| rootfs | 2G ext4；eMMC 余量约 6G 未分配 |
+| 已装包数 | **329**（apk 数据库实测） |
+| 主镜像 | `immortalwrt-25.12.2-mvebu-cortexa53-catdrive-ext4-sdcard.img.gz`<br>53,104,671 字节（50.6MB）<br>sha256 `4f128b8492c010dbb3418939dcc5756018c6f835ce538959e2de26439c616f2a` |
+| 编译来源 | GitHub Actions 云端构建（`.github/workflows/build-25122.yml`） |
 
-- 固件刷写的是 **eMMC**，U-Boot 本身（SPI flash）不动——固件刷坏可通过 U-Boot 重刷恢复，**不会永久变砖**。
-- `gzwrite` 进行中（约 3~5 分钟）**绝对不能断电**——中断会让 eMMC 处于半写状态。
-- 真正的变砖风险是**刷 U-Boot 本身**（SPI flash），本教程不涉及；原厂 U-Boot 转 snail U-Boot 请严格按原帖教程操作。
-- 极端情况（U-Boot 也无法进入）可用 Marvell UART 模式救砖（见"变砖自救"）。
+### 开箱即有
 
-## 1. 需要准备的东西
+```
+后台/SSH      LuCI（bootstrap 主题）· uhttpd · dropbear · rpcd · ucode 全套
+旧插件兼容    luci-compat + lua（OpenClash 等 Lua 应用装完菜单直接可见）
+NAS 服务      samba4-server · luci-app-samba4 · vsftpd · ntfs-3g · cifsmount
+内网工具      ddns-scripts · luci-app-ddns · luci-app-wol · nlbwmon
+IPv6 旁路由   odhcp6c · odhcpd-ipv6only
+磁盘健康      smartmontools · hdparm · lm-sensors · btrfs-progs · resize2fs
+工具集        bash · curl · vim-full · unrar · unzip · xz · bzip2 · ip-full
+              bind-dig · iperf3 · httping · iftop · tcpdump · git · screen · lsof · strace
+证书/时区     ca-certificates · ca-bundle · openssl-util · zoneinfo-asia
+```
+
+### 方案 B 的运行时行为（与官方 OpenWrt 的差异点）
+
+| 项目 | 行为 | 实现 |
+|---|---|---|
+| MAC | 首次开机从 U-Boot 环境 `ethaddr` 读取（只认 `4c:65:a8:` 前缀），写入配置后脚本自删 | `etc/uci-defaults/99-mac-from-uboot` |
+| 网络 | DHCP 客户端优先（换网络环境自动适配）；60 秒无地址兜底 `192.168.1.1` 并开 DHCP 服务；下次开机自动重试 DHCP | `usr/bin/catdrive-netinit`（由 `etc/rc.local` 调用） |
+| 主机名/时区 | `catdrive` / `Asia/Shanghai` | `etc/config/system` |
+| root 密码 | 无（首次登录请自行设置） | — |
+
+---
+
+## 二、产物
+
+[Releases → catdrive-25122](https://github.com/linbei945/catdrive-immortalwrt/releases/tag/catdrive-25122)：
+
+| 文件 | 说明 |
+|---|---|
+| `immortalwrt-...-catdrive-ext4-sdcard.img.gz` | **主镜像**，刷这个 |
+| `immortalwrt-...-catdrive-squashfs-sdcard.img.gz` | squashfs 变体（本项目不推荐） |
+| `immortalwrt-...-catdrive-initramfs-kernel.bin` | 应急内核（内存系统，刷坏时的备选） |
+| `flash-image-snail.bin` | snail 修改版 U-Boot；原厂 U-Boot 的机器**必须先刷它** |
+| `sha256sums` | 构建期生成的校验清单（见下方说明） |
+
+> **校验说明**：`sha256sums` 由 CI 在"剥离 sysupgrade 尾巴"**之前**生成，与最终上传的文件哈希会不一致。
+> 以本 README 上方记录的 sha256（`4f128b84...`）或下载后自算为准。
+
+---
+
+## 三、编译过程（最终版：config.full 方案）
+
+### 1. 设计原则
+
+```
+官方源码（零改动内核配置）  +  我们只加三样东西
+                              ├─ 机型定义（DTS + bootscript + image 片段）
+                              ├─ rootfs 定制文件（files/）
+                              └─ 一份完整 config（config.full）
+```
+
+**为什么内核配置必须零改动**：vermagic 是内核 `.config` 中所有 `=y`/`=m` 行的 md5。
+一旦多一行，哈希就变，官方源里 1010 个 kmod 全部装不上。只加 DTS（不进 config），哈希就能保持不变。
+
+### 2. 目录结构
+
+```
+catdrive-25122/
+├── config.full                      ★ 完整配置（2395 行，从验证过的构建树导出）
+├── dts/armada-3720-catdrive.dts     机型设备树（含 comphy 禁用修复）
+├── catdrive.bootscript              U-Boot 启动脚本
+├── cortexa53-catdrive.append.mk     机型定义（镜像生成的 image 片段）
+├── strip_trailer.py                 剥离 sysupgrade 元数据尾巴（gzwrite 需要纯 gzip 流）
+├── official.buildinfo               官方 release 的构建配置（历史方法遗留，当前不用）
+├── wget-any/Makefile                历史遗留：曾试图自造的元包，会造成 kconfig 递归环，未使用
+└── files/                           rootfs 定制（会被原样拷进镜像）
+    ├── etc/config/network           lan=br-lan + dhcp（方案 B 的 DHCP 优先）
+    ├── etc/config/system            hostname=catdrive + 时区上海
+    ├── etc/fw_env.config            /dev/mtd1 0x0 0x10000（让 fw_printenv 能读 U-Boot 环境）
+    ├── etc/rc.local                 调用 netinit
+    ├── etc/uci-defaults/99-mac-from-uboot   首启读 ethaddr 写配置，执行后自删
+    ├── etc/uci-defaults/99-catdrive-share   首启设置（自删）
+    └── usr/bin/catdrive-netinit     DHCP 60 秒兜底逻辑
+```
+
+### 3. 云端编译流程（8 步，全自动）
+
+`.github/workflows/build-25122.yml`，push 到 main 或手动触发，**约 3 小时**（4 核 runner）。
+
+| 步骤 | 动作 | 关键点 |
+|---|---|---|
+| 1 | `actions/checkout` | 取本仓库 |
+| 2 | 释放磁盘 + 安装依赖 | build-essential/clang/flex/bison/gawk/gettext/libncurses/libssl/python3-pyelftools… |
+| 3 | `git clone --depth 1 --branch v25.12.2 immortalwrt` | **基线锁死官方 tag**，不用 master/SNAPSHOT |
+| 4 | 应用 catdrive 集成 | 拷 DTS → `target/linux/mvebu/files/.../marvell/`；拷 bootscript → `target/linux/mvebu/image/`；`cat *.append.mk >> cortexa53.mk`；`cp -a files/. openwrt/files/` |
+| 5 | `feeds update -a && feeds install -a && feeds install <显式清单>` | 装 luci-app-samba4 / nlbwmon / wol / ddns / lm-sensors / unrar |
+| 6 | `cp ../catdrive-25122/config.full .config && make defconfig` | ★ **直接用入库配置**，不现场拼装 |
+| 7 | **29 项断言** | 见下；缺任何一项 5 分钟内失败，不进编译 |
+| 8 | `make download -j` → `make -j` → 验证 → 剥尾巴 → 上传 | vermagic 断言 + gzip 校验 + sha256 + 上传 Release |
+
+**第 7 步的断言清单**（任何一项缺失立即 `exit 1`）：
+
+```
+CONFIG_ALL_KMODS=y                      全 kmod 编译（官方 release 同款）
+CONFIG_TARGET_ROOTFS_PARTSIZE=2048      2G 分区
+CONFIG_TARGET_DEVICE_mvebu_cortexa53_DEVICE_catdrive=y   机型被选中
+CONFIG_PACKAGE_luci / dropbear / ucode / luci-compat / lua
+CONFIG_PACKAGE_samba4-server / luci-app-samba4 / vsftpd / ntfs-3g / unrar
+CONFIG_PACKAGE_ddns-scripts / luci-app-ddns / luci-app-wol / nlbwmon
+CONFIG_PACKAGE_odhcp6c / odhcpd-ipv6only
+CONFIG_PACKAGE_bash / curl / ip-full / btrfs-progs / smartmontools
+CONFIG_PACKAGE_lm-sensors / hdparm / uboot-envtools / block-mount
+```
+
+**编译后的三道验证**：
+
+```
+① vermagic 必须等于 846049ff0684ff21c8cae8e6f2efc82e
+② gzip -t 通过（尾巴已被 strip_trailer.py 剥离，否则 gzwrite 会写坏）
+③ 只收集 ext4-sdcard（squashfs/initramfs 仅作附带上传）
+```
+
+### 4. 本地等价编译（可选）
+
+需要 Linux（Debian/Ubuntu）或任意 x86 Linux 环境；**本项目作者已不再维护本地构建树**，
+因为云端产物即最终发布物，且本地环境会破坏"人人可复现"的前提。
+
+```bash
+# 依赖：build-essential clang flex bison g++ gawk gcc-multilib gettext \
+#       git libncurses-dev libssl-dev python3-setuptools python3-pyelftools \
+#       rsync swig unzip zlib1g-dev file wget libelf-dev
+git clone --depth 1 --branch v25.12.2 https://github.com/immortalwrt/immortalwrt.git openwrt
+cd openwrt
+
+# 应用集成
+mkdir -p target/linux/mvebu/files/arch/arm64/boot/dts/marvell
+cp ../catdrive-25122/dts/armada-3720-catdrive.dts target/linux/mvebu/files/arch/arm64/boot/dts/marvell/
+cp ../catdrive-25122/catdrive.bootscript target/linux/mvebu/image/
+cat ../catdrive-25122/cortexa53-catdrive.append.mk >> target/linux/mvebu/image/cortexa53.mk
+mkdir -p files && cp -a ../catdrive-25122/files/. files/
+
+# feeds + 配置
+./scripts/feeds update -a && ./scripts/feeds install -a
+./scripts/feeds install luci-app-samba4 luci-app-nlbwmon luci-app-wol luci-app-ddns lm-sensors unrar
+cp ../catdrive-25122/config.full .config
+make defconfig
+
+# 断言（与 CI 一致，任一失败就停）
+for a in CONFIG_ALL_KMODS=y CONFIG_TARGET_ROOTFS_PARTSIZE=2048 \
+         CONFIG_PACKAGE_luci=y CONFIG_PACKAGE_ucode=y CONFIG_PACKAGE_luci-compat=y \
+         CONFIG_PACKAGE_samba4-server=y CONFIG_PACKAGE_ddns-scripts=y \
+         CONFIG_PACKAGE_odhcp6c=y CONFIG_PACKAGE_bash=y CONFIG_PACKAGE_curl=y; do
+  grep -q "^$a" .config || { echo "FAIL: $a"; exit 1; }
+done
+
+# 编译（root 用户必须带 FORCE_UNSAFE_CONFIGURE=1，否则 tools/tar 拒编）
+export FORCE_UNSAFE_CONFIGURE=1
+make -j$(nproc) download
+make -j$(nproc)
+
+# 剥尾巴 + 校验
+cd bin/targets/mvebu/cortexa53
+python3 ../../../../catdrive-25122/strip_trailer.py
+gzip -t *catdrive*ext4-sdcard*.img.gz
+sha256sum *catdrive*ext4-sdcard*.img.gz
+cat ../../../../build_dir/target-*/linux-mvebu_cortexa53/linux-*/.vermagic
+```
+
+### 5. 复现性要点
+
+1. **基线是官方 tag**（`v25.12.2`），不是滚动分支
+2. **配置随仓库走**（`config.full`），不是现场拼装
+3. **feeds 由 tag 自带锁定**（`feeds.conf.default` 里写死了 commit）
+4. **断言是准入门槛**，配置被"规范化"掉任何一项都会在 5 分钟内暴露
+5. 想换版本：改 workflow 里两处 `v25.12.2` → 重新导出 config.full → 跑一次断言全绿才算通过
+
+---
+
+## 四、首次刷机（需要 TTL 线，请完整阅读）
+
+### 0. 风险说明（先读这个）
+
+- 固件刷的是 **eMMC**，U-Boot 在 **SPI flash**，本教程全程不碰 SPI → **不会永久变砖**
+- `gzwrite` 期间（3~5 分钟）**绝对不能断电**
+- 真正会变砖的是刷 U-Boot 本身；原厂 U-Boot 转 snail U-Boot 请严格按原帖操作
+- U-Boot 也进不去时，还有 Marvell UART 模式救砖（见"变砖自救"）
+
+### 1. 需要准备
 
 | 物品 | 说明 |
 |---|---|
 | 猫盘 + 电源（5V 3A） | |
-| USB 转 TTL 线 | CH340 或 PL2303，几块钱，**必须有**（刷机与排障全靠它） |
-| U 盘 | FAT32 格式，放固件镜像 |
-| 螺丝刀 | 拆外壳 |
-| 网线 | 刷完连主路由 |
+| USB 转 TTL 线 | CH340/PL2303，几块钱，**必须有** |
+| U 盘 | FAT32，放镜像 |
+| 螺丝刀、网线 | |
 
-## 2. 接 TTL 线（拆机）
-
-1. 拆掉外壳，主板边缘找到 4 根排针（TTL 接口，丝印见原帖图）。
-2. 接线（**与 TTL 线交叉**，**千万不要接 VCC/3.3V**）：
+### 2. 接 TTL 线（拆机）
 
 ```
 猫盘 GND  ←→  TTL GND
 猫盘 TX   ←→  TTL RX
-猫盘 RX   ←→  TTL TX
+猫盘 RX   ←→  TTL TX        ← 交叉接，千万不要接 VCC/3.3V
 ```
 
-3. TTL 线插电脑，设备管理器确认出现 COM 口（CH340 常见为 COM9）。
+电脑设备管理器确认 COM 口（CH340 常见 COM9）。
 
-## 3. 打开串口终端
+### 3. 串口终端
 
-- 工具：PuTTY / MobaXterm / SecureCRT 任选
-- 参数：**115200, 8N1, 无流控**
-- 选对 COM 口，先不连接。
+PuTTY / MobaXterm 任选，参数 **115200 8N1 无流控**。
 
-## 4. 校验镜像
-
-电脑上执行（或用在线工具）：
+### 4. 校验镜像
 
 ```
 certutil -hashfile immortalwrt-25.12.2-...-ext4-sdcard.img.gz SHA256
 ```
 
-与 Release `checksums.txt` 比对，**不一致就不要刷**。
+与上文记录的 `4f128b84...` 比对，不一致不要刷。
 
-## 5. 制作 U 盘
+### 5. 制作 U 盘
 
-1. U 盘 FAT32 格式化。
-2. 固件镜像放 U 盘**根目录**，建议改短名 `catdrive.img.gz`（命令好敲）。
+FAT32 格式化，镜像放**根目录**，建议改短名 `FLASH.GZ`（U-Boot 命令好敲）。
 
-## 6. 进 U-Boot 并刷写
+### 6. 进 U-Boot 并刷写
 
-1. U 盘插猫盘 USB 口。
-2. 串口终端点"连接"。
-3. 猫盘**断电再上电**，立刻在串口里**连按空格**（只有 2 秒窗口）。
-4. 看到 `Marvell>>` 即成功停住；错过就断电重来。
-5. 确认 U-Boot 是 snail 修改版：`printenv bootcmd` 看到 `bootcmd=usbboot` 即是；
-   看到 `syno` 相关的是**原厂 U-Boot，先停手**，去原帖刷 snail U-Boot。
-6. 依次执行（每条回车）：
+1. U 盘插猫盘 USB 口，串口点"连接"
+2. 猫盘**断电再上电**，立刻连按**空格**（窗口只有 2 秒）
+3. 看到 `Marvell>>` 即成功；错过就断电重来
+4. 确认是 snail U-Boot：`printenv bootcmd` 显示 `bootcmd=usbboot`；显示 `syno` 相关的是原厂 U-Boot，**停手**
+5. 依次执行：
 
 ```
 usb start
 ```
-→ 看到 `1 Storage Device(s) found` 说明 U 盘认到了。
+→ 看到 `1 Storage Device(s) found`
+
 ```
 mmc dev 0
 ```
+
 ```
-fatload usb 0:1 0x6000000 catdrive.img.gz
+fatload usb 0:1 0x6000000 FLASH.GZ
 ```
-→ 出现 `bytes read`（80775216 之类，约 78MB）且大小与镜像一致才继续。
-**78MB 可一次加载，无需分片。**
+→ 必须核对字节数：`53104671 bytes read`（与镜像大小一致才继续）
+
 ```
 echo SIZE=$filesize
 ```
-→ 记下这个值。
+
 ```
 gzwrite mmc 0 0x6000000 $filesize
 ```
-→ 开始写 eMMC，进度会滚动，**3~5 分钟，此时绝对不能断电**。
-→ 出现 `2183266304 bytes, crc 0x......` 即完成。
+→ 进度滚动，**3~5 分钟，不能断电**；结束出现 `2183266304 bytes, crc 0x........`
+
 ```
 reset
 ```
 
-7. 设备重启，拔掉 U 盘可选（不拔也不影响，插着设备会尝试从 U 盘启动失败后回落 eMMC）。
-
-## 7. 首次启动验证
-
-- 串口应看到 `kmodloader: done loading`（约 11 秒）和 `Link is Up`（约 35 秒）。
-- 网线插主路由：等约 1 分钟，在主路由 DHCP 租约里找主机名 **catdrive**。
-- 找不到也没关系：60 秒后设备自动切到 `192.168.1.1`，电脑设成
-  `192.168.1.x/24` 直连即可进后台（root 无密码，**先改密码**）。
-- 验证清单：
+### 7. 首次启动验证
 
 ```
-cat /sys/class/net/br-lan/address    → 应为你机器标签上的 MAC
-grep DISTRIB_RELEASE /etc/openwrt_release
-apk update                           → 确认软件源可达
-apk add kmod-tun                     → 官方 kmod 在线安装验证
+cat /sys/class/net/br-lan/address          → 应为你标签上的 MAC（4c:65:a8:xx）
+grep DISTRIB_RELEASE /etc/openwrt_release  → 25.12.2
+ls /etc/modules.d | wc -l                  → 约 73
+apk update                                  → 源可达
+apk add kmod-tun && modprobe tun            → 官方 kmod 在线安装验证
 ```
+
+接主路由：约 1 分钟内在 DHCP 租约里找主机名 `catdrive`。
+找不到也不怕：60 秒后自动兜底 `192.168.1.1`，电脑设 `192.168.1.x/24` 直连即可进后台。
 
 ---
 
-# 二、重刷 / 升级（网线刷机，免拆机传镜像）
+## 五、重刷与升级
 
-前提：设备已运行本固件且能 SSH（任何网络状态均可）。
+### 1. 日常升级（优先）
 
-TTL 线此时**只用来敲命令，不传镜像**——镜像走网线（SSH）。
-
-## 1. 小版本升级（优先尝试）
-
-```
-apk update && apk upgrade
+```sh
+apk update && apk upgrade          # 用户态包在线升级，不需要重刷
+apk add luci-theme-argon           # 装主题
+apk add luci-app-openclash         # 装插件
 ```
 
-官方源持续更新，用户态包直接升级，**不需要重刷**。
+**不要在线升级 `base-files` / `kernel` / `libc` 这类系统包**——它们是固件的一部分，
+在线升级会覆盖方案 B 的配置模板（network/system 预设、uci-defaults）。要更新基础系统请整盘重刷。
 
-## 2. 整盘重刷（大版本/系统更换）
+> 附注：LuCI 里 base-files 的"升级"按钮在 apk3 下是空转（`apk upgrade base-files` 无操作），
+> 点完仍显示旧版本属正常，不是失败。
 
-TTL 线此时**只用来敲命令，不传镜像**——镜像走网线（SSH）。
+### 2. 整盘重刷（网线传镜像，TTL 只敲命令）
 
-在电脑上把新镜像传到设备并校验：
-
-```
+```sh
+# 电脑侧
 scp 新镜像.img.gz root@设备IP:/root/new.img.gz
-ssh root@设备IP md5sum /root/new.img.gz     # 与电脑端比对，一致才继续
+ssh root@设备IP md5sum /root/new.img.gz     # 与电脑侧比对
 ```
 
-然后重启进 U-Boot（倒计时连按空格），依次执行三条命令：
+重启进 U-Boot（倒计时连按空格），三条命令：
 
 ```
 ext4load mmc 0:2 0x6000000 new.img.gz
@@ -163,73 +313,60 @@ gzwrite mmc 0 0x6000000 $filesize
 reset
 ```
 
-`ext4load` 直接从设备 rootfs（`mmc 0:2`）读取镜像——网线传完数据后，
-U-Boot 阶段不再需要任何网络操作。`gzwrite` 期间（3~5 分钟）不能断电。
+`ext4load` 从设备自身 rootfs（`mmc 0:2`）读镜像，U-Boot 阶段不需要网络。
 
-## 3. 完全没有 TTL 线时
+### 3. 免 TTL 刷写（systemd 内 dd 法，风险自负）
 
-TTL 是进 U-Boot 的唯一入口，没有 TTL 就无法触发 `gzwrite`。
-因此：**刷过一次之后，TTL 线建议常备或在重刷时临时接上**（接线 2 分钟）。
-
----
-
-# 三、变砖自救
-
-| 现象 | 级别 | 处理 |
-|---|---|---|
-| 能进 `Marvell>>`，系统起不来 | 轻 | 重新 `fatload`+`gzwrite` 即可 |
-| 串口无输出 | 中 | 检查 TTL 接线/波特率；换 USB 口 |
-| U-Boot 也进不去 | 重 | **Marvell UART 模式救砖**：猫盘 SoC 支持 UART 烧写，
-上电即跑 WTP 协议，用 [bl-armada-3720](https://github.com/Izumiko/bl-armada-3720)
-Release 里的 `WtpDownload_linux` 或 `mox-imager` 经 TTL 线刷回 `flash-image.bin`
-（命令见该仓库 README，无需编程器无需拆 flash） |
-| 以上全部失败 | 极端 | CH341A 编程器 + SOP8 夹子直接夹 SPI flash 重写 |
-
-UART 救砖是猫盘这类 Marvell 平台的官方机制，成功率接近 100%，
-所以本教程的刷机操作（不碰 SPI）风险可控。
-
----
-
-# 四、构建
-
-GitHub Actions：`.github/workflows/build-25122.yml`（push 自动触发，约 3 小时）。
-
-本地编译等价流程：ImmortalWrt `v25.12.2` + `catdrive-25122/` 集成 + `official.buildinfo` 差异
-（`PARTSIZE=2048`、`argon`、`uboot-envtools` 等），`make defconfig && make -j`。
-内核 vermagic 必须等于官方 kmods 的 `846049ff0684ff21c8cae8e6f2efc82e`（CI 已内置断言）。
-
-## 常用应用：OpenClash 安装（照抄这份配置就不会报错）
-
-本镜像 **lan 为 DHCP 模式**（无静态 IP，为了换网络环境能自动适配），
-OpenClash 默认只读配置文件里的 `network.lan.ipaddr`，会读不到而启动失败。
-按下面步骤装，天然避开这个问题：
+设备能 SSH 时，可直接覆盖 eMMC 两个分区（p1 内核 32.3M、p2 rootfs 2G）：
 
 ```sh
-# 1. 安装（自动带入 ruby / dnsmasq-full / kmod-tun 等依赖）
+# 关键：源镜像必须放 tmpfs（/tmp），绝不能放在被写入的 p2 分区上
+scp 镜像.img.gz root@设备IP:/tmp/new.img.gz
+# 停服务 → rootfs 只读 → dd p1 → dd p2 → sync → reboot
+```
+
+**必须遵守两条铁律**（违反过一次，导致 p2 半写、SSH 认证失效）：
+
+1. **源文件不能放在正在写入的分区上**（放 `/tmp` 这个 tmpfs）
+2. **校验要在 `drop_caches` 之前完成**，否则动态链接程序无法执行（连 md5sum 都跑不起来）
+
+出问题不会变砖（U-Boot 在 SPI 未动），插回 TTL 用第 2 节流程即可救。
+
+---
+
+## 六、应用安装与常见问题
+
+### OpenClash（照抄就不会报错）
+
+本镜像 lan 是 DHCP 模式（无静态 `ipaddr`），OpenClash 默认只读配置文件 → 读不到 LAN 网段会启动失败。
+
+```sh
 apk add luci-app-openclash
 
-# 2. 关键一步：明确指定 LAN 网卡（DHCP 模式必须；静态 IP 模式可省）
+# 关键一步：明确指定 LAN 网卡（DHCP 模式必须；静态 IP 模式可省）
 uci set openclash.config.interface_name=br-lan
 uci commit openclash
 
-# 3. 启用并启动
 uci set openclash.config.enable=1
 /etc/init.d/openclash restart
-
-# 4. 看日志确认成功
 grep -E "Start Successful|Error" /tmp/openclash.log | tail -3
 ```
 
-看到 `[Tip] OpenClash Start Successful!` 即启动成功。然后浏览器进
-LuCI → 服务 → OpenClash，导入订阅/配置文件即可。
+看到 `[Tip] OpenClash Start Successful!` 即成功。图形界面等价位置：
+OpenClash → 插件设置 → 常规设置 → **指定 LAN 接口 = br-lan**。
 
-图形界面等价操作：OpenClash → 插件设置 → 常规设置 → **指定 LAN 接口 = br-lan**。
+**订阅配置注意**：不少机场订阅是"仅节点"格式（只有 `proxies`，没有 `proxy-groups` / `rules` / DNS 上游），
+直接导入会启动但在线不通。需要补：策略组（select + url-test）、分流规则（LAN/CN 直连，其余走代理）、
+国内 DNS 上游（223.5.5.5 / 119.29.29.29，否则会默认用被墙的 Cloudflare DoH）。
 
-## 常见问题（装应用后出问题先看这里）
+**模式陷阱**：`openclash.config.proxy_mode` 若是 `global`，所有流量走 GLOBAL 组（默认 DIRECT）→ 什么都上不去，
+且**重启后依旧**。保持 `rule`：
 
-### 装了 LuCI 应用，侧栏菜单里没有
+```sh
+uci set openclash.config.proxy_mode=rule && uci commit openclash && /etc/init.d/openclash restart
+```
 
-旧式 Lua 应用（OpenClash 及大量第三方插件）在新版 ucode LuCI 上需要兼容层：
+### 装了 LuCI 应用但侧栏没菜单
 
 ```sh
 apk add luci-compat
@@ -238,42 +375,56 @@ apk add luci-compat
 ```
 
 然后**退出 LuCI 重新登录**（菜单在登录会话时生成）。
-
-### OpenClash 启动后立刻自动停止，日志报 `LAN IP Address Get Error`
-
-原因：本镜像 lan 是 DHCP 模式（配置里没有静态 `ipaddr`），OpenClash
-默认只读配置文件、且“自动探测”也从配置推导，因此拿不到 LAN 网段。
-地址其实是有的（`ip addr show br-lan` 能看到），只是它查错了地方。
-
-```sh
-uci set openclash.config.interface_name=br-lan
-uci commit openclash
-uci set openclash.config.enable=1
-/etc/init.d/openclash restart
-```
-
-界面位置：OpenClash → 插件设置 → 常规设置 → 指定 LAN 接口 = br-lan。
+本镜像已内置 luci-compat + lua，正常情况下不会遇到；只有应用自身依赖缺失时才会。
 
 ### 安装时报包冲突
 
-多半是和 `dnsmasq` 冲突（OpenClash 等需要完整版）：
-
 ```sh
-apk add dnsmasq-full
+apk add dnsmasq-full        # OpenClash 等需要完整版 dnsmasq
 ```
 
-### 应用启动了但报缺内核模块（`.ko`）
-
-在官方源找同名 kmod 安装即可，例如：
+### 启动报缺内核模块
 
 ```sh
 apk search kmod- | grep 关键词
-apk add kmod-xxx
+apk add kmod-xxx            # vermagic 与官方一致，官方 kmod 直接可装
 ```
 
-（本镜像的 vermagic 与官方 kmods 完全一致，官方源的内核模块可直接安装。）
+### 换软件源
 
-### 换了软件源后 apk 报错
+源文件 `/etc/apk/repositories.d/distfeeds.list`，每行一个
+`https://镜像站/immortalwrt/releases/25.12.2/.../packages.adb`，
+含 `targets/mvebu/cortexa53/kmods/6.12.103-1-846049ff.../packages.adb` 一行（kmod 源）。
 
-源文件：`/etc/apk/repositories.d/distfeeds.list`，格式为每行一个
-`https://镜像站/immortalwrt/releases/25.12.2/.../packages.adb`。
+---
+
+## 七、变砖自救
+
+| 现象 | 级别 | 处理 |
+|---|---|---|
+| 能进 `Marvell>>`，系统起不来 | 轻 | 重新 `fatload` + `gzwrite` |
+| 串口无输出 | 中 | 查 TTL 接线/波特率；换 USB 口 |
+| U-Boot 也进不去 | 重 | **Marvell UART 模式**：上电即走 WTP 协议，用 [bl-armada-3720](https://github.com/Izumiko/bl-armada-3720) 的 `WtpDownload` / `mox-imager` 经 TTL 刷回 `flash-image.bin`（无需编程器） |
+| 以上全失败 | 极端 | CH341A 编程器 + SOP8 夹子直写 SPI flash |
+
+UART 模式是 Marvell 平台的官方机制，成功率接近 100%，所以"不碰 SPI"的刷机操作风险可控。
+
+---
+
+## 八、版本历史
+
+详细编译史与失败复盘见 **[FAILURES.md](FAILURES.md)**（含每一版的构建方法、产物、踩过的坑）。
+
+| 版本 | 基线 | 特征 | 产物 |
+|---|---|---|---|
+| V1–V5 | 25.12-SNAPSHOT | 全塞 1108 kmod、modules.d 167/boot.d 23、2G、argon、comphy 修复 | 本地编译，两次实机验证 |
+| Plan B | 25.12-SNAPSHOT | 删 mkdata、MAC 改 uci-defaults 一次性读取 | `696d8f8b...` |
+| 25.12.2 基础版 | 官方 v25.12.2 | 官方 buildinfo + printf 拼装、不预装 kmod、169~200 包 | 17.6MB，`c2d2703d...`（NJU 源修补版） |
+| 25.12.2 全功能版 | 官方 v25.12.2 | **config.full 方案**、318 包、U 盘刷入验证 | 50.4MB |
+| **25.12.2 终版** | 官方 v25.12.2 | + `luci-compat`/`lua`（旧插件菜单可见），329 包 | **50.6MB，`4f128b84...`** |
+
+## 九、致谢
+
+U-Boot（`flash-image-snail.bin`）来自矿渣社区用户 **ihotte（Snail）** 的
+[猫盘 OpenWrt、Synology 双启动固件](http://bbs.nasdiyer.com/forum.php?mod=viewthread&tid=11988) 项目。
+作者声明：仅供自娱自乐，严禁用于商业用途。本仓库非商业分享并注明出处，如作者有异议请联系移除。
